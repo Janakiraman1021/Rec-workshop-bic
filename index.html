@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CALC·CHAIN — Real Gas DApp</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f8f7f2;
+  --surface:#ffffffcc;
+  --surface-strong:#ffffff;
+  --surface2:#f3f1e8;
+  --border:#d7d2bf;
+  --border-glow:#1f8f88;
+  --accent-blue:#1f8f88;
+  --accent-cyan:#2cb67d;
+  --accent-purple:#136f63;
+  --accent-green:#179a62;
+  --accent-red:#cc3f3f;
+  --accent-amber:#c98a17;
+  --text-primary:#1f2b27;
+  --text-secondary:#45615b;
+  --text-muted:#7c877f;
+  --eq-gradient:linear-gradient(135deg,#1f8f88,#2cb67d);
+  --font-display:'Orbitron',monospace;
+  --font-mono:'Share Tech Mono',monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:var(--font-mono);
+  background:
+    radial-gradient(circle at 12% 8%,#ffe5d2 0%,transparent 40%),
+    radial-gradient(circle at 88% 12%,#d9f5ec 0%,transparent 42%),
+    radial-gradient(circle at 52% 100%,#f9ecd1 0%,transparent 36%),
+    var(--bg);
+  color:var(--text-primary);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:24px 12px 42px;
+  position:relative;
+  overflow-x:hidden;
+}
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(31,143,136,0.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(31,143,136,0.06) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(circle at center,black 38%,transparent 100%);
+  pointer-events:none;
+  z-index:0;
+}
+body::after{
+  content:'';
+  position:fixed;
+  width:480px;
+  height:480px;
+  border-radius:50%;
+  background:radial-gradient(circle,#ffffffc2 0%,transparent 70%);
+  top:-240px;
+  left:50%;
+  transform:translateX(-50%);
+  pointer-events:none;
+  z-index:0;
+}
+.container{width:100%;max-width:1120px;position:relative;z-index:1}
+
+.layout-grid{display:grid;gap:14px}
+.setup-stack,.calc-stack{display:flex;flex-direction:column;gap:14px}
+
+.header{text-align:center;margin-bottom:22px;animation:fadeDown .7s ease both}
+.logo{
+  font-family:var(--font-display);
+  font-size:clamp(21px,5.5vw,30px);
+  font-weight:900;
+  letter-spacing:4px;
+  text-shadow:0 6px 24px rgba(20,91,85,0.2);
+  background:linear-gradient(115deg,#145b55,#1f8f88,#2cb67d);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.logo-sub{font-size:10px;letter-spacing:4px;color:var(--text-muted);margin-top:5px}
+.chain-dots{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px}
+.cdot{width:7px;height:7px;border-radius:50%;animation:blink 2s ease-in-out infinite}
+.cdot:nth-child(1){background:#ff944d;box-shadow:0 0 10px rgba(255,148,77,0.5)}
+.cdot:nth-child(2){background:var(--accent-blue);animation-delay:.4s}
+.cdot:nth-child(3){background:var(--accent-cyan);animation-delay:.8s;box-shadow:0 0 10px rgba(44,182,125,0.45)}
+.cline{width:30px;height:1px;background:linear-gradient(90deg,#c8c2ad,#a5cec8)}
+
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:18px;
+  margin-bottom:0;
+  position:relative;
+  overflow:hidden;
+  backdrop-filter:blur(10px);
+  box-shadow:0 10px 28px rgba(39,57,52,0.08);
+  animation:fadeUp .55s ease both;
+}
+.card::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(140deg,rgba(255,255,255,0.35),transparent 34%);
+  pointer-events:none;
+}
+
+.section-label{font-size:9px;letter-spacing:3px;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase}
+.section-label span{color:var(--accent-blue);margin-right:6px}
+
+.mm-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn-mm{
+  padding:11px 18px;
+  background:linear-gradient(135deg,#ff9f43,#e26b1b);
+  border:none;
+  border-radius:12px;
+  color:#fff;
+  font-family:var(--font-display);
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:1px;
+  cursor:pointer;
+  transition:opacity .2s,transform .15s,box-shadow .2s;
+  white-space:nowrap;
+  box-shadow:0 6px 14px rgba(226,107,27,0.3);
+}
+.btn-mm:hover{opacity:.9;transform:translateY(-1px)}
+.btn-mm:active{transform:scale(.97)}
+.btn-mm:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.wallet-pill{font-size:10px;background:rgba(31,143,136,0.08);color:var(--accent-blue);border:1px solid rgba(31,143,136,0.28);border-radius:7px;padding:4px 10px;letter-spacing:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}
+.network-pill{font-size:9px;padding:4px 8px;border-radius:7px;border:1px solid;letter-spacing:1px;white-space:nowrap}
+.network-pill.sepolia{background:rgba(19,111,99,0.1);color:var(--accent-purple);border-color:rgba(19,111,99,0.3)}
+.network-pill.wrong{background:rgba(204,63,63,0.1);color:var(--accent-red);border-color:rgba(204,63,63,0.35);animation:pulse 1s infinite}
+
+.field-input{width:100%;background:#fff;border:1px solid var(--border);border-radius:12px;padding:10px 13px;font-family:var(--font-mono);font-size:11px;color:var(--text-primary);outline:none;transition:border-color .2s,box-shadow .2s,transform .15s;letter-spacing:.5px;margin-bottom:8px}
+.field-input::placeholder{color:var(--text-muted)}
+.field-input:focus{border-color:var(--accent-blue);box-shadow:0 0 0 3px rgba(31,143,136,0.15);transform:translateY(-1px)}
+textarea.field-input{resize:vertical;min-height:90px;font-size:10px;line-height:1.5}
+
+.btn-primary{width:100%;padding:12px;background:var(--eq-gradient);border:none;border-radius:12px;color:#fff;font-family:var(--font-display);font-size:10px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:opacity .2s,transform .15s,box-shadow .2s;margin-top:4px;box-shadow:0 10px 20px rgba(31,143,136,0.26)}
+.btn-primary:hover{opacity:.92;box-shadow:0 12px 24px rgba(31,143,136,0.34);transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+
+.status-row{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:10px;color:var(--text-secondary);flex-wrap:wrap}
+.sdot{width:8px;height:8px;border-radius:50%;background:#9da9a0;flex-shrink:0;transition:all .3s}
+.sdot.green{background:var(--accent-green);box-shadow:0 0 8px rgba(23,154,98,0.55)}
+.sdot.red{background:var(--accent-red);box-shadow:0 0 8px rgba(204,63,63,0.5)}
+.sdot.amber{background:var(--accent-amber)}
+.sdot.pulse{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+.calc-card{
+  background:var(--surface-strong);
+  border:1px solid var(--border);
+  border-radius:24px;
+  padding:20px;
+  animation:fadeUp .6s .12s ease both;
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 18px 34px rgba(40,57,52,0.1);
+}
+.calc-card::after{
+  content:'⛓';
+  position:absolute;
+  bottom:-18px;
+  right:-8px;
+  font-size:114px;
+  color:#0f7068;
+  opacity:.07;
+  pointer-events:none;
+  user-select:none;
+}
+
+.op-selector{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.op-pill{flex:1;min-width:64px;padding:10px 6px;border:1px solid var(--border);border-radius:12px;background:#fff;color:var(--text-secondary);font-family:var(--font-display);font-size:11px;font-weight:700;cursor:pointer;transition:all .16s;text-align:center;letter-spacing:1px}
+.op-pill:hover{border-color:var(--accent-blue);color:var(--accent-blue);transform:translateY(-1px)}
+.op-pill.active{background:rgba(31,143,136,0.1);border-color:var(--accent-blue);color:var(--accent-blue);box-shadow:0 0 0 3px rgba(31,143,136,0.14)}
+.op-pill:disabled{opacity:.35;cursor:not-allowed}
+
+.display{background:linear-gradient(165deg,#fcf9ef,#f1f7f4);border:1px solid var(--border);border-radius:16px;padding:14px 18px;margin-bottom:16px;min-height:94px;position:relative}
+.display-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;gap:8px;flex-wrap:wrap}
+.tx-badge{font-family:var(--font-display);font-size:8px;font-weight:700;letter-spacing:2px;padding:4px 8px;border-radius:6px;background:rgba(124,135,127,.18);color:var(--text-muted);border:1px solid #a7b2aa;transition:all .3s;white-space:nowrap}
+.tx-badge.live{background:rgba(23,154,98,.12);color:var(--accent-green);border-color:rgba(23,154,98,.45);box-shadow:0 0 10px rgba(23,154,98,.22)}
+.tx-badge.mining{background:rgba(201,138,23,.12);color:var(--accent-amber);border-color:rgba(201,138,23,.45);animation:pulse .8s infinite}
+.expr-display{font-size:11px;color:var(--text-muted);letter-spacing:1px;text-align:right;min-height:14px;font-family:var(--font-mono);word-break:break-all}
+.val-display{font-family:var(--font-display);font-size:clamp(24px,6.6vw,36px);font-weight:700;color:var(--text-primary);text-align:right;letter-spacing:2px;word-break:break-all;line-height:1.1;transition:color .2s}
+.val-display.error{color:var(--accent-red)}
+.val-display.result{color:var(--accent-blue);text-shadow:0 0 10px rgba(31,143,136,.26)}
+
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;transition:opacity .3s}
+.calc-grid.locked{pointer-events:none;opacity:.35}
+.btn{padding:15px 6px;border:1px solid var(--border);border-radius:13px;background:var(--surface2);color:var(--text-primary);font-family:var(--font-mono);font-size:16px;cursor:pointer;transition:all .12s;text-align:center;user-select:none}
+.btn:hover{background:#ece9dc;border-color:#b8b09a}
+.btn:active{transform:scale(.93)}
+.btn.clr{color:var(--accent-red);border-color:rgba(204,63,63,.3)}
+.btn.clr:hover{border-color:var(--accent-red);box-shadow:0 0 8px rgba(204,63,63,.2)}
+.btn.span2{grid-column:span 2}
+.btn.eq{background:var(--eq-gradient);border:none;color:#fff;font-family:var(--font-display);font-size:12px;font-weight:700;grid-column:span 4;padding:16px;letter-spacing:2px;box-shadow:0 8px 22px rgba(31,143,136,.3);transition:all .2s}
+.btn.eq:hover{box-shadow:0 12px 28px rgba(31,143,136,.42);transform:translateY(-2px)}
+.btn.eq:active{transform:scale(.98)}
+.btn.eq:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none}
+
+.mining-overlay{display:none;position:absolute;inset:0;background:rgba(247,244,235,0.9);border-radius:24px;z-index:10;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.mining-overlay.show{display:flex}
+.mining-spinner{width:48px;height:48px;border:3px solid #c6d7d3;border-top-color:var(--accent-blue);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.mining-text{font-family:var(--font-display);font-size:11px;letter-spacing:3px;color:var(--accent-blue);text-align:center}
+.mining-hash{font-size:9px;color:var(--text-muted);letter-spacing:1px;max-width:260px;text-align:center;word-break:break-all;margin-top:4px}
+
+.log-section{margin-top:16px}
+.log-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.log-title{font-size:9px;letter-spacing:3px;color:var(--text-muted);text-transform:uppercase}
+.log-title span{color:var(--accent-blue)}
+.tx-count-badge{font-size:9px;background:rgba(31,143,136,.12);color:var(--accent-blue);border:1px solid rgba(31,143,136,.33);padding:2px 7px;border-radius:10px;letter-spacing:1px}
+.log-list{max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.log-list::-webkit-scrollbar{width:4px}
+.log-list::-webkit-scrollbar-thumb{background:#b6b09b;border-radius:2px}
+.log-empty{font-size:10px;color:var(--text-muted);text-align:center;padding:14px;letter-spacing:2px}
+.log-item{background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:10px;animation:slideIn .25s ease;line-height:1.6}
+.log-item.success{border-color:rgba(23,154,98,.35);background:rgba(23,154,98,.05)}
+.log-item.failed{border-color:rgba(204,63,63,.35);background:rgba(204,63,63,.05)}
+.log-item.pending{border-color:rgba(201,138,23,.35);background:rgba(201,138,23,.05)}
+.log-row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.log-expr{color:var(--text-secondary);flex:1}
+.log-res{font-weight:700;white-space:nowrap}
+.log-res.ok{color:var(--accent-green)}
+.log-res.err{color:var(--accent-red)}
+.log-res.wait{color:var(--accent-amber);animation:pulse 1s infinite}
+.log-meta{display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;align-items:center}
+.etherscan-link{color:var(--accent-blue);font-size:9px;letter-spacing:.5px;text-decoration:none;border:1px solid rgba(31,143,136,.3);padding:2px 7px;border-radius:4px;transition:all .15s}
+.etherscan-link:hover{background:rgba(31,143,136,.1);border-color:var(--accent-blue)}
+.log-gas{font-size:9px;color:var(--text-muted);letter-spacing:.5px}
+.log-block{font-size:9px;color:var(--text-muted)}
+
+.footer{text-align:center;margin-top:20px;font-size:9px;letter-spacing:3px;color:var(--text-muted)}
+.footer span{color:var(--accent-blue)}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#ffffff;border:1px solid #bdc8c4;border-radius:10px;padding:10px 18px;font-size:11px;color:var(--text-primary);letter-spacing:1px;z-index:999;transition:transform .3s,opacity .3s;opacity:0;white-space:nowrap;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 10px 20px rgba(40,57,52,0.1)}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.err{border-color:rgba(204,63,63,.55);color:var(--accent-red)}
+.toast.ok{border-color:rgba(23,154,98,.45);color:var(--accent-green)}
+.toast.info{border-color:rgba(201,138,23,.55);color:var(--accent-amber)}
+
+@keyframes fadeDown{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:420px){
+  body{padding-top:18px}
+  .calc-card{padding:14px}
+  .btn{padding:13px 4px;font-size:14px}
+  .btn.eq{font-size:10px;padding:13px}
+  .calc-grid{gap:6px}
+  .op-pill{font-size:10px;padding:8px 4px}
+  .logo-sub{letter-spacing:3px}
+}
+
+@media(min-width:980px){
+  .layout-grid{grid-template-columns:minmax(300px,360px) minmax(0,1fr);gap:18px}
+  .setup-stack{position:sticky;top:18px;align-self:start}
+  .header{text-align:left;padding:8px 8px 2px}
+  .chain-dots{justify-content:flex-start}
+  .footer{text-align:right;margin-top:16px;padding-right:4px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo">⬡ CALC·CHAIN</div>
+    <div class="logo-sub">real gas transactions · sepolia testnet</div>
+    <div class="chain-dots">
+      <div class="cdot"></div><div class="cline"></div>
+      <div class="cdot"></div><div class="cline"></div>
+      <div class="cdot"></div>
+    </div>
+  </div>
+
+  <div class="layout-grid">
+    <div class="setup-stack">
+      <!-- step 1: wallet -->
+      <div class="card">
+        <div class="section-label"><span>01</span> WALLET</div>
+        <div class="mm-row">
+          <button class="btn-mm" id="mmBtn" onclick="connectWallet()">🦊 Connect MetaMask</button>
+          <span class="wallet-pill" id="walletPill" style="display:none"></span>
+          <span class="network-pill" id="networkPill" style="display:none"></span>
+        </div>
+        <div class="status-row">
+          <div class="sdot" id="mmDot"></div>
+          <span id="mmStatus">MetaMask not connected</span>
+        </div>
+      </div>
+
+      <!-- step 2: contract -->
+      <div class="card">
+        <div class="section-label"><span>02</span> CONTRACT</div>
+        <input class="field-input" id="contractAddr" placeholder="Contract Address — 0x..."/>
+        <textarea class="field-input" id="contractAbi" placeholder='ABI JSON — paste here&#10;[{"inputs":[{"type":"int256"},{"type":"int256"}],"name":"add","outputs":[{"type":"int256"}],"stateMutability":"nonpayable","type":"function"}, ...]'></textarea>
+        <button class="btn-primary" id="loadBtn" onclick="loadContract()" disabled>⛓ LOAD CONTRACT</button>
+        <div class="status-row">
+          <div class="sdot" id="contractDot"></div>
+          <span id="contractStatus">connect wallet first</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="calc-stack">
+      <!-- calculator -->
+      <div class="calc-card" id="calcCard">
+    <div class="mining-overlay" id="miningOverlay">
+      <div class="mining-spinner"></div>
+      <div class="mining-text">MINING BLOCK...</div>
+      <div class="mining-hash" id="miningHash">waiting for MetaMask confirmation</div>
+    </div>
+
+    <!-- operator selector -->
+    <div style="margin-bottom:14px;display:none" id="opSelectorWrap">
+      <div class="section-label"><span>▸</span> OPERATION</div>
+      <div class="op-selector" id="opSelector"></div>
+    </div>
+
+    <!-- display -->
+    <div class="display">
+      <div class="display-top">
+        <div class="tx-badge" id="txBadge">OFFLINE</div>
+        <div class="expr-display" id="exprDisplay"></div>
+      </div>
+      <div class="val-display" id="valDisplay">0</div>
+    </div>
+
+    <!-- numpad -->
+    <div class="calc-grid locked" id="calcGrid">
+      <button class="btn clr span2" onclick="clearAll()">CLR</button>
+      <button class="btn clr" onclick="backspace()">⌫</button>
+      <button class="btn clr" onclick="toggleSign()">±</button>
+
+      <button class="btn" onclick="pressNum('7')">7</button>
+      <button class="btn" onclick="pressNum('8')">8</button>
+      <button class="btn" onclick="pressNum('9')">9</button>
+      <button class="btn" style="color:var(--accent-cyan);border-color:rgba(0,229,255,.2)" onclick="setInputB()">→B</button>
+
+      <button class="btn" onclick="pressNum('4')">4</button>
+      <button class="btn" onclick="pressNum('5')">5</button>
+      <button class="btn" onclick="pressNum('6')">6</button>
+      <button class="btn" style="font-size:11px;color:var(--text-muted)" id="inputLabel">A</button>
+
+      <button class="btn" onclick="pressNum('1')">1</button>
+      <button class="btn" onclick="pressNum('2')">2</button>
+      <button class="btn" onclick="pressNum('3')">3</button>
+      <button class="btn" onclick="pressDot()">.</button>
+
+      <button class="btn span2" onclick="pressNum('0')">0</button>
+      <button class="btn span2" style="color:var(--text-muted);font-size:11px" id="abDisplay">A=0 · B=0</button>
+
+      <button class="btn eq" id="eqBtn" onclick="executeOnChain()" disabled>⛓ SEND TRANSACTION</button>
+    </div>
+
+    <!-- tx log -->
+    <div class="log-section">
+      <div class="log-header">
+        <div class="log-title"><span>▸</span> LIVE TX LOG</div>
+        <div class="tx-count-badge" id="txCountBadge">0 TXS</div>
+      </div>
+      <div class="log-list" id="logList">
+        <div class="log-empty">// no on-chain transactions yet</div>
+      </div>
+    </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">SEPOLIA TESTNET · <span>CRYPTOCORTEX</span> · REAL GAS TXS</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SEPOLIA = '0xaa36a7';
+let provider, signer, contract, txCount = 0;
+let valA = '0', valB = '0', editingA = true;
+let selectedOp = null; // {name, fnName}
+let ops = [];
+
+// ── toast ──
+let _toastTimer;
+function toast(msg, type='', dur=4000){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(()=>t.className='toast', dur);
+}
+
+// ── wallet ──
+async function connectWallet(){
+  if(!window.ethereum){ toast('Install MetaMask first!','err'); return; }
+  const btn = document.getElementById('mmBtn');
+  btn.disabled = true; btn.textContent = 'Connecting...';
+  setDot('mmDot','amber pulse');
+  try {
+    await window.ethereum.request({method:'eth_requestAccounts'});
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    const addr = await signer.getAddress();
+    const net = await provider.getNetwork();
+    const chainHex = '0x' + net.chainId.toString(16);
+
+    document.getElementById('walletPill').textContent = addr.slice(0,6)+'...'+addr.slice(-4);
+    document.getElementById('walletPill').style.display = 'inline-block';
+    const np = document.getElementById('networkPill');
+    np.style.display = 'inline-block';
+
+    if(chainHex.toLowerCase() === SEPOLIA){
+      np.textContent = '⬡ Sepolia'; np.className='network-pill sepolia';
+      setDot('mmDot','green');
+      setTxt('mmStatus','connected · Sepolia testnet');
+      btn.textContent = '✓ Connected';
+      document.getElementById('loadBtn').disabled = false;
+      setTxt('contractStatus','paste contract address & ABI → load');
+      toast('Wallet connected!','ok');
+    } else {
+      np.textContent = '⚠ Wrong Network'; np.className='network-pill wrong';
+      setDot('mmDot','red');
+      setTxt('mmStatus','switch to Sepolia in MetaMask');
+      btn.disabled = false; btn.textContent = '↺ Switch to Sepolia';
+      btn.onclick = ()=>switchNet();
+      toast('Switch to Sepolia testnet!','err');
+    }
+    window.ethereum.on('accountsChanged',()=>location.reload());
+    window.ethereum.on('chainChanged',()=>location.reload());
+  } catch(e){
+    setDot('mmDot','red');
+    setTxt('mmStatus','connection rejected');
+    btn.disabled = false; btn.textContent = '🦊 Connect MetaMask';
+    toast('Rejected','err');
+  }
+}
+async function switchNet(){
+  try{ await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:SEPOLIA}]}); location.reload(); }
+  catch(e){ toast('Cannot switch network','err'); }
+}
+
+// ── contract load ──
+function loadContract(){
+  const addr = document.getElementById('contractAddr').value.trim();
+  const abiRaw = document.getElementById('contractAbi').value.trim();
+  if(!addr){ toast('Enter contract address','err'); return; }
+  if(!abiRaw){ toast('Paste ABI JSON','err'); return; }
+  let abi;
+  try{ abi = JSON.parse(abiRaw); } catch(e){ toast('Invalid ABI JSON','err'); return; }
+  try{ contract = new ethers.Contract(addr, abi, signer); } catch(e){ toast('Contract error: '+e.message.slice(0,50),'err'); return; }
+
+  // parse non-view functions with 2 inputs
+  ops = abi
+    .filter(x => x.type==='function' && x.stateMutability !== 'view' && x.stateMutability !== 'pure' && x.inputs && x.inputs.length >= 2)
+    .map(x => ({ label: x.name.toUpperCase(), fnName: x.name, inputs: x.inputs }));
+
+  if(ops.length === 0){
+    toast('No non-view functions with 2+ inputs found in ABI. Deploy new Calculator.sol!','err',6000);
+    return;
+  }
+
+  renderOps();
+  document.getElementById('opSelectorWrap').style.display = 'block';
+  document.getElementById('txBadge').textContent = 'LIVE';
+  document.getElementById('txBadge').classList.add('live');
+  setDot('contractDot','green');
+  setTxt('contractStatus','contract ready · select operation');
+  toast('Contract loaded! Select an operation.','ok');
+}
+
+function renderOps(){
+  const wrap = document.getElementById('opSelector');
+  wrap.innerHTML = '';
+  const symbols = {add:'+', subtract:'−', multiply:'×', divide:'÷', mod:'%'};
+  ops.forEach(op => {
+    const sym = symbols[op.fnName] || op.label.slice(0,3);
+    const btn = document.createElement('button');
+    btn.className = 'op-pill';
+    btn.innerHTML = `<div style="font-size:16px;margin-bottom:2px">${sym}</div><div style="font-size:8px;letter-spacing:1px">${op.label}</div>`;
+    btn.onclick = () => selectOp(op, btn);
+    wrap.appendChild(btn);
+  });
+}
+
+function selectOp(op, btn){
+  selectedOp = op;
+  document.querySelectorAll('.op-pill').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('calcGrid').classList.remove('locked');
+  document.getElementById('eqBtn').disabled = false;
+  updateExpr();
+  toast('Selected: '+op.fnName,'ok');
+}
+
+// ── calculator logic ──
+function pressNum(n){
+  if(editingA){ valA = valA==='0'||valA==='-0' ? (valA.startsWith('-')?'-':'')+n : valA+n; }
+  else { valB = valB==='0'||valB==='-0' ? (valB.startsWith('-')?'-':'')+n : valB+n; }
+  updateDisplay();
+}
+function pressDot(){
+  if(editingA){ if(!valA.includes('.')) valA+='.'; }
+  else { if(!valB.includes('.')) valB+='.'; }
+  updateDisplay();
+}
+function backspace(){
+  if(editingA){ valA = valA.length>1 ? valA.slice(0,-1) : '0'; }
+  else { valB = valB.length>1 ? valB.slice(0,-1) : '0'; }
+  updateDisplay();
+}
+function toggleSign(){
+  if(editingA){ valA = valA.startsWith('-') ? valA.slice(1) : '-'+valA; }
+  else { valB = valB.startsWith('-') ? valB.slice(1) : '-'+valB; }
+  updateDisplay();
+}
+function setInputB(){ editingA = false; document.getElementById('inputLabel').textContent='B'; updateDisplay(); }
+function clearAll(){ valA='0'; valB='0'; editingA=true; document.getElementById('inputLabel').textContent='A'; updateDisplay(); document.getElementById('valDisplay').className='val-display'; }
+
+function updateDisplay(){
+  const show = editingA ? valA : valB;
+  document.getElementById('valDisplay').textContent = show;
+  updateExpr();
+}
+function updateExpr(){
+  if(!selectedOp){ document.getElementById('exprDisplay').textContent=''; return; }
+  const sym = {add:'+',subtract:'−',multiply:'×',divide:'÷'}[selectedOp.fnName] || selectedOp.fnName;
+  document.getElementById('exprDisplay').textContent = valA + ' ' + sym + ' ' + valB;
+  document.getElementById('abDisplay').textContent = 'A='+valA+' · B='+valB;
+}
+
+// ── ON-CHAIN EXECUTE ──
+async function executeOnChain(){
+  if(!selectedOp){ toast('Select an operation first','err'); return; }
+  const a = parseInt(valA), b = parseInt(valB);
+  if(isNaN(a)||isNaN(b)){ toast('Enter valid integer numbers','err'); return; }
+
+  const sym = {add:'+',subtract:'−',multiply:'×',divide:'÷'}[selectedOp.fnName]||selectedOp.fnName;
+  const exprStr = valA + ' ' + sym + ' ' + valB;
+
+  // show mining overlay
+  document.getElementById('miningOverlay').classList.add('show');
+  document.getElementById('eqBtn').disabled = true;
+  document.getElementById('txBadge').textContent = 'MINING';
+  document.getElementById('txBadge').className = 'tx-badge mining';
+  document.getElementById('miningHash').textContent = 'waiting for MetaMask confirmation...';
+
+  const logId = addLog(exprStr, null, null, null, 'pending');
+  toast('MetaMask popup open — confirm the transaction!','info', 10000);
+
+  try {
+    const args = [BigInt(a), BigInt(b)];
+    const tx = await contract[selectedOp.fnName](...args);
+
+    document.getElementById('miningHash').textContent = 'TX: '+tx.hash.slice(0,16)+'...'+tx.hash.slice(-8)+' · waiting for block...';
+    updateLog(logId, exprStr, null, tx.hash, null, null, 'pending');
+    toast('Transaction submitted! Mining...','info', 8000);
+
+    const receipt = await tx.wait();
+    const gasUsed = receipt.gasUsed.toString();
+    const block = receipt.blockNumber.toString();
+
+    // try to get return value via staticCall
+    let result;
+    try{
+      const raw = await contract[selectedOp.fnName].staticCall(...args);
+      result = raw.toString();
+    } catch(_){
+      // fallback: compute locally
+      const localRes = {add:a+b,subtract:a-b,multiply:a*b,divide:b!==0?Math.trunc(a/b):null}[selectedOp.fnName];
+      result = localRes !== null ? localRes.toString() : '?';
+    }
+
+    // update display
+    document.getElementById('valDisplay').textContent = result;
+    document.getElementById('valDisplay').className = 'val-display result';
+    document.getElementById('exprDisplay').textContent = exprStr + ' =';
+    valA = result; valB = '0'; editingA = false;
+
+    txCount++;
+    document.getElementById('txCountBadge').textContent = txCount + ' TXS';
+    updateLog(logId, exprStr, result, tx.hash, gasUsed, block, 'success');
+    document.getElementById('txBadge').textContent = 'LIVE';
+    document.getElementById('txBadge').className = 'tx-badge live';
+    toast('✓ Block confirmed! Result: '+result,'ok');
+
+  } catch(e){
+    console.error(e);
+    const reason = e?.reason || e?.info?.error?.message || e?.message || 'Transaction failed';
+    document.getElementById('valDisplay').textContent = 'Error';
+    document.getElementById('valDisplay').className = 'val-display error';
+    updateLog(logId, exprStr, 'Error', null, null, null, 'failed');
+    document.getElementById('txBadge').textContent = 'LIVE';
+    document.getElementById('txBadge').className = 'tx-badge live';
+    toast(reason.slice(0,70),'err');
+  }
+
+  document.getElementById('miningOverlay').classList.remove('show');
+  document.getElementById('eqBtn').disabled = false;
+}
+
+// ── log helpers ──
+function addLog(expr, result, txHash, gas, status){
+  const list = document.getElementById('logList');
+  if(list.querySelector('.log-empty')) list.innerHTML='';
+  const id = 'log_'+Date.now();
+  const el = document.createElement('div');
+  el.id = id; el.className='log-item '+status;
+  el.innerHTML = renderLogHTML(expr, result, txHash, gas, null, status);
+  list.insertBefore(el, list.firstChild);
+  if(list.children.length>10) list.lastElementChild.remove();
+  return id;
+}
+function updateLog(id, expr, result, txHash, gas, block, status){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.className = 'log-item '+status;
+  el.innerHTML = renderLogHTML(expr, result, txHash, gas, block, status);
+}
+function renderLogHTML(expr, result, txHash, gas, block, status){
+  const resColor = status==='success'?'ok':status==='failed'?'err':'wait';
+  const resText = status==='success'?('= '+result):status==='failed'?'✗ failed':'⏳ mining...';
+  const ethLink = txHash
+    ? `<a class="etherscan-link" href="https://sepolia.etherscan.io/tx/${txHash}" target="_blank">↗ Etherscan</a>`
+    : '';
+  const gasStr = gas ? `<span class="log-gas">⛽ ${Number(gas).toLocaleString()} gas</span>` : '';
+  const blockStr = block ? `<span class="log-block">Block #${block}</span>` : '';
+  return `
+    <div class="log-row">
+      <span class="log-expr">${expr}</span>
+      <span class="log-res ${resColor}">${resText}</span>
+    </div>
+    <div class="log-meta">${ethLink}${gasStr}${blockStr}</div>
+  `;
+}
+
+// helpers
+function setDot(id, cls){ document.getElementById(id).className='sdot '+cls; }
+function setTxt(id, t){ document.getElementById(id).textContent=t; }
+</script>
+</body>
+</html>
